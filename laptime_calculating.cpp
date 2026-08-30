@@ -2,6 +2,7 @@
 #include <cmath>
 #include <vector>
 #include <algorithm>
+#include <string>
 
 namespace gc { //gc сокращенние от "global constants"
     const double g{9.81}; // Ускорение свободного падения (м/с^2)
@@ -32,9 +33,21 @@ struct Corner {
         : distance(l), degree(a), height_difference(h) {}
 };
 
+void print_laptime(double laptime, const std::string& lap_number) {
+    int total_ms = static_cast<int>(std::round(laptime * 1000.0));
+    int minutes {total_ms / 60000};
+    int seconds { (total_ms % 60000) / 1000 };
+    int milliseconds { total_ms % 1000 };
+
+    std::cout << "\n" << lap_number  << " time: "
+              << minutes << ":" 
+              << (seconds < 10 ? "0" : "") << seconds << "." 
+              << (milliseconds < 100 ? (milliseconds < 10 ? "00" : "0") : "") << milliseconds;
+}
+
 // Вспомогательная функция: расчёт максимальной скорости для поворота
 double get_max_corner_speed(const Corner& seg, double tyre_grip) {
-    if (std::abs(seg.degree) < 0.001) return 100.0; // 360 км/ч для прямых
+    if (std::abs(seg.degree) < 0.001) return 85.0; // 
 
     double angle_rad {seg.degree * (gc::pi / 180.0)};
     double corner_radius {seg.distance / angle_rad}; 
@@ -195,9 +208,12 @@ int main() {
     double total_time{0.0};
 
     for (size_t lap = 0; lap < 50; ++lap) {
+        double lap_time {0.0};
         for (size_t i = 0; i < monza_track.size(); ++i) {
-            total_time += calculate_segment_time(monza_track, i, car, speed);
+            lap_time += calculate_segment_time(monza_track, i, car, speed);
         }
+        print_laptime(lap_time,"Lap " + std::to_string(lap + 1) + (lap + 1 < 10 ? " " : "") ); // Вывод времени круга с выравниванием для однозначных чисел
+        total_time += lap_time;
         car.tyre_grip -= 0.0005; // Имитация износа шин после каждого круга
         car.weight -= 2.75; // Имитация сжигания топлива после каждого круга
     }
@@ -208,11 +224,9 @@ int main() {
     int seconds { (total_ms % 60000) / 1000 };
     int milliseconds { total_ms % 1000 };
 
-    std::cout << "\nРезультат без вылетов: " 
-              << minutes << ":" 
-              << (seconds < 10 ? "0" : "") << seconds << "." 
-              << (milliseconds < 100 ? (milliseconds < 10 ? "00" : "0") : "") << milliseconds 
-              << " (" << total_time << " с)\n";
+    std::cout << "\n";
+
+    print_laptime(total_time, "Total"); // "Total" indicates total time
 
     return 0;
 }
