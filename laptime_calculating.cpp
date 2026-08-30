@@ -3,6 +3,26 @@
 #include <vector>
 #include <algorithm>
 
+namespace gc { //gc сокращенние от "global constants"
+    const double g{9.81}; // Ускорение свободного падения (м/с^2)
+    const double pi{3.141592653589793};
+    const double air_density {1.225}; // Плотность воздуха (кг/м^3)
+}
+
+struct Car {
+    double horsepower{530.0}; // Мощность двигателя (л.с.)
+    double weight{1320.0};     // Масса автомобиля (кг)
+    double Cd_A {0.95};        // Коэффициент аэродинамического сопротивления на площадь автомобиля (C_d * A)
+    
+    double tyre_grip{1.28}; // Коэффициент сцепления шин
+
+    double effective_hp { horsepower * 0.88 * 0.91 }; // Эффективная мощность двигателя с учётом КПД трансмиссии и потерь
+
+    double get_hp_to_watts() const {
+        return effective_hp * 745.7; // Перевод л.с. в Вт
+    }
+};
+
 struct Corner {
     double distance{0.0};         // Длина участка в метрах
     double degree{0.0};           // Угол поворота (0 для прямых)
@@ -14,81 +34,133 @@ struct Corner {
 
 // Вспомогательная функция: расчёт максимальной скорости для поворота
 double get_max_corner_speed(const Corner& seg, double tyre_grip) {
-    if (std::abs(seg.degree) < 0.001) return 95.0; // Для прямой возвращаем топ-спид
-    const double pi{3.141592653589793};
-    const double g{9.81};
-    double angle_rad = seg.degree * (pi / 180.0);
-    double corner_radius = seg.distance / angle_rad; 
-    double sin_slope = std::clamp(std::abs(seg.height_difference) / seg.distance, 0.0, 1.0);
-    double longitudinal_slope = std::asin(sin_slope); 
+    if (std::abs(seg.degree) < 0.001) return 100.0; // 360 км/ч для прямых
 
-    return std::sqrt(tyre_grip * g * corner_radius * std::cos(longitudinal_slope));
+    double angle_rad {seg.degree * (gc::pi / 180.0)};
+    double corner_radius {seg.distance / angle_rad}; 
+    double sin_slope {std::clamp(std::abs(seg.height_difference) / seg.distance, 0.0, 1.0)};
+    double longitudinal_slope {std::asin(sin_slope)}; 
+
+    double speed {std::sqrt(tyre_grip * gc::g * corner_radius * std::cos(longitudinal_slope))};
+
+    if (seg.degree > 75.0) {
+        speed *= 0.82; 
+    }
+
+    return speed;
 }
 
-double calculate_segment_time(const Corner& seg, const Corner* next_seg, double& speed_enter) {
-    double time_segment{0.0};
-    const double g{9.81}; 
-    const double tyre_grip{1.6}; 
+double get_current_accelerate (const Car& car, double speed) {// Функция для расчёта ускорения в данный момент времени на основе текущей скорости и характеристик автомобиля
+    double accelerate{0.0};
+    double engine_force {car.get_hp_to_watts() / speed}; // Сила от двигателя (Н)
+    double grip_max_force {car.tyre_grip * car.weight * gc::g}; // Максимальная сила сцепления (Н)
+    double drag_force { 0.5 * gc::air_density * car.Cd_A * speed * speed}; // Сила сопротивления воздуха
+
+    double net_force {std::min(engine_force, grip_max_force) - drag_force}; // Чистая сила (Н)
+    accelerate = net_force / car.weight; // Ускорение (м/с^2)
+
+    return accelerate;
+}
+
+// Замедление ТОЛЬКО по сцеплению шин (без аэродинамики) для безопасного запаса торможения
+double get_safe_decel_forces(const Car& car) {
+    return car.tyre_grip * gc::g;
+}
+
+// Замедление с учётом аэродинамики для физики
+double get_decel_forces(const Car& car, double current_v) {
+    double f_brake_grip { car.tyre_grip * car.weight * gc::g};
+    double f_drag {0.5 * gc::air_density * car.Cd_A * current_v * current_v};
+    return (f_brake_grip + f_drag) / car.weight;
+}
+
+// Функция поиска минимальной разрешённой скорости впереди (сквозь связки поворотов)
+double get_target_speed_ahead(const std::vector<Corner>& track, size_t current_idx, const Car& car) {
+    double min_speed {100.0};
+    double accumulated_dist {0.0};
+
+    for (size_t offset = 1; offset <= 3; ++offset) {
+        size_t idx = (current_idx + offset) % track.size();
+        const Corner& seg { track[idx] };
+
+        double seg_max_speed { get_max_corner_speed(seg, car.tyre_grip)};
+        
+        // Если нашли поворот с меньшей лимитированной скоростью
+        if (seg_max_speed < min_speed) {
+            min_speed = seg_max_speed;
+        }
+
+        accumulated_dist += seg.distance;
+        // Если дистанция заглядывания превысила 300м, останавливаем поиск
+        if (accumulated_dist > 300.0) break;
+    }
+
+    return min_speed;
+}
+
+double calculate_segment_time(const std::vector<Corner>& track, size_t current_idx, const Car& car, double& speed_enter) {
+    const Corner& seg = track[current_idx];
+    double time_segment{0.0};   
 
     // --- 1. ПРЯМОЙ УЧАСТОК ---
     if (std::abs(seg.degree) < 0.001) {
-        double accel {5.0};                   // Ускорение разгона (м/с^2)
-        double max_brake_decel {tyre_grip * g};// Максимальное замедление при торможении (~15.7 м/с^2)
-        double max_straight_speed {90.0};     // Топ-спид (~324 км/ч)
+        double target_speed = get_target_speed_ahead(track, current_idx, car);
+        
+        double distance_left {seg.distance};
+        double total_time {0.0};
+        const double dt {0.005};
 
-        // Узнаем целевую скорость для СЛЕДУЮЩЕГО поворота
-        double target_speed  {next_seg ? get_max_corner_speed(*next_seg, tyre_grip) : max_straight_speed};
+        while (distance_left > 0.0) {
+            // Используем консервативное замедление (только шины) для расчёта тормозного пути
+            double safe_decel {get_safe_decel_forces(car)};
 
-        // Расчёт тормозного пути: S_brake = (V_current^2 - V_target^2) / (2 * a_decel)
-        double brake_distance {0.0};
-        if (speed_enter > target_speed) {
-            brake_distance = (speed_enter * speed_enter - target_speed * target_speed) / (2.0 * max_brake_decel);
-        }
+            double brake_distance {0.0};
+            if (speed_enter > target_speed) {
+                brake_distance = (speed_enter * speed_enter - target_speed * target_speed) / (2.0 * safe_decel);
+            }
 
-        // Если вся прямая уходит на торможение или мы уже близко к повороту
-        if (seg.distance <= brake_distance) {
-            // ФАЗА ПОЛНОГО ТОРМОЖЕНИЯ
-            double speed_exit {std::sqrt(std::max(0.0, speed_enter * speed_enter - 2.0 * max_brake_decel * seg.distance))};
-            speed_exit = std::max(speed_exit, target_speed); // Не тормозим ниже скорости поворота
+            double accel {0.0};
+
+            if (distance_left <= brake_distance) {
+                // Реальное торможение с учётом аэродинамики
+                accel = -get_decel_forces(car, speed_enter);
+            } else {
+                accel = get_current_accelerate(car, speed_enter);
+            }
+
+            speed_enter += accel * dt;
+            const double max_gearbox_speed = 285.0 / 3.6; // 285 км/ч в м/с
+            speed_enter = std::min(speed_enter, max_gearbox_speed);
             
-            double avg_speed { (speed_enter + speed_exit) / 2.0 };
-            time_segment = seg.distance / avg_speed;
-            speed_enter = speed_exit;
-        } 
-        else {
-            // ФАЗА: СНАЧАЛА РАЗГОН, ПОТОМ ТОРМОЖЕНИЕ
-            double accel_distance {seg.distance - brake_distance};
+            if (distance_left <= brake_distance && speed_enter < target_speed) {
+                speed_enter = target_speed;
+            }
 
-            // 1. Разгоняемся на первой части прямой
-            double speed_peak {std::sqrt(speed_enter * speed_enter + 2.0 * accel * accel_distance)};
-            speed_peak = std::min(speed_peak, max_straight_speed);
-            double time_accel {accel_distance / ((speed_enter + speed_peak) / 2.0)};
-
-            // 2. Пересчитываем реальный тормозной путь от пиковой скорости
-            double real_brake_dist {seg.distance - accel_distance};
-            double speed_exit {target_speed};
-            double time_brake {real_brake_dist / ((speed_peak + speed_exit) / 2.0)};
-
-            time_segment = time_accel + time_brake;
-            speed_enter = speed_exit; // К повороту подходим ровно на target_speed!
+            double ds {speed_enter * dt};
+            distance_left -= ds;
+            total_time += dt;
         }
 
-        return time_segment;
+        return total_time;
     }
 
     // --- 2. ПОВОРОТ ---
-    double max_possible_enter_speed = get_max_corner_speed(seg, tyre_grip);
+    double max_possible_enter_speed {get_max_corner_speed(seg, car.tyre_grip)};
 
-    // Защита и проверка на вылет
-    if (speed_enter > max_possible_enter_speed * 1.02) {
+    // Если скорость всё ещё выше допустимой — тормозим прямо в повороте (аварийный дотормоз)
+    if (speed_enter > max_possible_enter_speed * 1.01) {
         std::cout << "[ВНИМАНИЕ] Вылет с трассы в повороте! Вход: " 
                   << speed_enter * 3.6 << " км/ч (Макс: " 
                   << max_possible_enter_speed * 3.6 << " км/ч)\n";
         speed_enter = max_possible_enter_speed;
     }
 
-    double speed_exit {std::min(speed_enter, max_possible_enter_speed)};
-    double avg_speed { (speed_enter + speed_exit) / 2.0 };
+    // В связках поворотов (например T1 -> T2) принудительно гасим скорость до лимита следующего поворота
+    size_t next_idx { (current_idx + 1) % track.size() };
+    double next_max_speed = get_max_corner_speed(track[next_idx], car.tyre_grip);
+
+    double speed_exit {std::min({speed_enter, max_possible_enter_speed, next_max_speed})};
+    double avg_speed  { (speed_enter + speed_exit) / 2.0 };
     
     time_segment = seg.distance / avg_speed;
     speed_enter = speed_exit;
@@ -97,6 +169,7 @@ double calculate_segment_time(const Corner& seg, const Corner* next_seg, double&
 }
 
 int main() {
+    Car car;
     std::vector<Corner> monza_track = {
         Corner(1120.0, 0.0, 1.5),    // Rettifilo
         Corner(35.0, 110.0, 0.0),    // T1
@@ -118,20 +191,22 @@ int main() {
         Corner(348.0, 42.0, 0.0)     // Parabolica
     };
 
-    double speed = 80.0; // Стартовая скорость на главной прямой
+    double speed {80.0};
     double total_time{0.0};
 
-    for (size_t i = 0; i < monza_track.size(); ++i) {
-        // Указываем следующий сегмент (с закольцовкой трассы)
-        const Corner* next_seg = &monza_track[(i + 1) % monza_track.size()];
-        
-        total_time += calculate_segment_time(monza_track[i], next_seg, speed);
+    for (size_t lap = 0; lap < 50; ++lap) {
+        for (size_t i = 0; i < monza_track.size(); ++i) {
+            total_time += calculate_segment_time(monza_track, i, car, speed);
+        }
+        car.tyre_grip -= 0.0005; // Имитация износа шин после каждого круга
+        car.weight -= 2.75; // Имитация сжигания топлива после каждого круга
     }
+    
 
-    int total_ms = static_cast<int>(total_time * 1000.0);
-    int minutes = total_ms / 60000;
-    int seconds = (total_ms % 60000) / 1000;
-    int milliseconds = total_ms % 1000;
+    int total_ms {static_cast<int>(total_time * 1000.0)};
+    int minutes {total_ms / 60000};
+    int seconds { (total_ms % 60000) / 1000 };
+    int milliseconds { total_ms % 1000 };
 
     std::cout << "\nРезультат без вылетов: " 
               << minutes << ":" 
