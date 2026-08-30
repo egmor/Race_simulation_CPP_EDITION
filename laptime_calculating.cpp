@@ -24,6 +24,28 @@ struct Car {
     }
 };
 
+struct Driver {
+    // Навыки приводятся к шкале 0.0 - 1.0 (или 0 - 100)
+    double braking_skill{1.0};   // 1.0 = идеальное торможение в точке Aпекса
+    double cornering_skill{1.0}; // 1.0 = 100% использование сцепления шин в апексе
+    double consistency{1.0};     // 1.0 = минимальный разброс ошибок между кругами
+    double reaction_time{0.10};  // Время реакции в секундах (для стартов)
+    
+    [[maybe_unused]] double racecraft{1.0}; // Для обгонов и защиты позиции
+
+    // Метод для получения процента реализации скорости в повороте
+    double realization_speed_car() const {
+        // Условный топ-пилот (1.0) едет на 100% предела, слабоватый (0.8) - на 97%
+        return 0.95 + (cornering_skill * 0.05); 
+    }
+
+    // Метод для точки торможения (коэффициент запаса)
+    double get_braking_margin() const {
+        // Чем ниже навык, тем раньше пилот начинает тормозить (добавляет запас по дистанции)
+        return 1.0 + (1.0 - braking_skill) * 0.08; 
+    }
+};
+
 struct Corner {
     double distance{0.0};         // Длина участка в метрах
     double degree{0.0};           // Угол поворота (0 для прямых)
@@ -46,7 +68,7 @@ void print_laptime(double laptime, const std::string& lap_number) {
 }
 
 // Вспомогательная функция: расчёт максимальной скорости для поворота
-double get_max_corner_speed(const Corner& seg, double tyre_grip) {
+double get_max_corner_speed(const Corner& seg, const Driver& driver, double tyre_grip) {
     if (std::abs(seg.degree) < 0.001) return 85.0; // 
 
     double angle_rad {seg.degree * (gc::pi / 180.0)};
@@ -60,7 +82,7 @@ double get_max_corner_speed(const Corner& seg, double tyre_grip) {
         speed *= 0.82; 
     }
 
-    return speed;
+    return speed * driver.realization_speed_car();
 }
 
 double get_current_accelerate (const Car& car, double speed) {// Функция для расчёта ускорения в данный момент времени на основе текущей скорости и характеристик автомобиля
@@ -88,7 +110,7 @@ double get_decel_forces(const Car& car, double current_v) {
 }
 
 // Функция поиска минимальной разрешённой скорости впереди (сквозь связки поворотов)
-double get_target_speed_ahead(const std::vector<Corner>& track, size_t current_idx, const Car& car) {
+double get_target_speed_ahead(const std::vector<Corner>& track, const Driver& driver, size_t current_idx, const Car& car) {
     double min_speed {100.0};
     double accumulated_dist {0.0};
 
@@ -96,7 +118,7 @@ double get_target_speed_ahead(const std::vector<Corner>& track, size_t current_i
         size_t idx = (current_idx + offset) % track.size();
         const Corner& seg { track[idx] };
 
-        double seg_max_speed { get_max_corner_speed(seg, car.tyre_grip)};
+        double seg_max_speed { get_max_corner_speed(seg, driver, car.tyre_grip)};
         
         // Если нашли поворот с меньшей лимитированной скоростью
         if (seg_max_speed < min_speed) {
@@ -111,13 +133,13 @@ double get_target_speed_ahead(const std::vector<Corner>& track, size_t current_i
     return min_speed;
 }
 
-double calculate_segment_time(const std::vector<Corner>& track, size_t current_idx, const Car& car, double& speed_enter) {
+double calculate_segment_time(const std::vector<Corner>& track, size_t current_idx, const Car& car, const Driver& driver, double& speed_enter) {
     const Corner& seg = track[current_idx];
     double time_segment{0.0};   
 
     // --- 1. ПРЯМОЙ УЧАСТОК ---
     if (std::abs(seg.degree) < 0.001) {
-        double target_speed = get_target_speed_ahead(track, current_idx, car);
+        double target_speed = get_target_speed_ahead(track, driver, current_idx, car);
         
         double distance_left {seg.distance};
         double total_time {0.0};
@@ -129,7 +151,7 @@ double calculate_segment_time(const std::vector<Corner>& track, size_t current_i
 
             double brake_distance {0.0};
             if (speed_enter > target_speed) {
-                brake_distance = (speed_enter * speed_enter - target_speed * target_speed) / (2.0 * safe_decel);
+                brake_distance = (speed_enter * speed_enter - target_speed * target_speed) / (2.0 * safe_decel) * driver.get_braking_margin(); // Добавляем запас по дистанции в зависимости от навыка пилота
             }
 
             double accel {0.0};
@@ -158,7 +180,7 @@ double calculate_segment_time(const std::vector<Corner>& track, size_t current_i
     }
 
     // --- 2. ПОВОРОТ ---
-    double max_possible_enter_speed {get_max_corner_speed(seg, car.tyre_grip)};
+    double max_possible_enter_speed {get_max_corner_speed(seg, driver, car.tyre_grip)};
 
     // Если скорость всё ещё выше допустимой — тормозим прямо в повороте (аварийный дотормоз)
     if (speed_enter > max_possible_enter_speed * 1.01) {
@@ -170,7 +192,7 @@ double calculate_segment_time(const std::vector<Corner>& track, size_t current_i
 
     // В связках поворотов (например T1 -> T2) принудительно гасим скорость до лимита следующего поворота
     size_t next_idx { (current_idx + 1) % track.size() };
-    double next_max_speed = get_max_corner_speed(track[next_idx], car.tyre_grip);
+    double next_max_speed = get_max_corner_speed(track[next_idx], driver, car.tyre_grip);
 
     double speed_exit {std::min({speed_enter, max_possible_enter_speed, next_max_speed})};
     double avg_speed  { (speed_enter + speed_exit) / 2.0 };
@@ -183,6 +205,7 @@ double calculate_segment_time(const std::vector<Corner>& track, size_t current_i
 
 int main() {
     Car car;
+    Driver driver;
     std::vector<Corner> monza_track = {
         Corner(1120.0, 0.0, 1.5),    // Rettifilo
         Corner(35.0, 110.0, 0.0),    // T1
@@ -210,7 +233,7 @@ int main() {
     for (size_t lap = 0; lap < 50; ++lap) {
         double lap_time {0.0};
         for (size_t i = 0; i < monza_track.size(); ++i) {
-            lap_time += calculate_segment_time(monza_track, i, car, speed);
+            lap_time += calculate_segment_time(monza_track, i, car, driver, speed);
         }
         print_laptime(lap_time,"Lap " + std::to_string(lap + 1) + (lap + 1 < 10 ? " " : "") ); // Вывод времени круга с выравниванием для однозначных чисел
         total_time += lap_time;
