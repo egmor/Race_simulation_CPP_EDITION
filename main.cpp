@@ -171,95 +171,64 @@ int main() {
 
     Driver driver;
     std::vector<std::vector<Corner>> tracks = {
-        {   //Monza GP
-            Corner(1120.0, 0.0, 1.5),    // Rettifilo
-            Corner(35.0, 110.0, 0.0),    // T1
-            Corner(35.0, 100.0, 0.0),    // T2
-            Corner(480.0, 0.0, 0.0),     // Прямая к Curva Grande
-            Corner(320.0, 35.0, -2.5),   // Curva Grande
-            Corner(420.0, 0.0, 0.0),     // Прямая к Roggia
-            Corner(40.0, 90.0, 0.0),     // T4
-            Corner(40.0, 85.0, 0.0),     // T5
-            Corner(260.0, 0.0, 0.0),     // Прямая Lesmo
-            Corner(110.0, 65.0, -1.5),   // Lesmo 1
-            Corner(150.0, 0.0, 0.0),     // Прямая
-            Corner(120.0, 70.0, -3.0),   // Lesmo 2
-            Corner(950.0, 0.0, -5.0),    // Serraglio
-            Corner(30.0, 75.0, 0.0),     // Ascari T8
-            Corner(25.0, 60.0, 0.0),     // Ascari T9
-            Corner(35.0, 55.0, 0.0),     // Ascari T10
-            Corner(600.0, 0.0, -2.5),    // Прямая перед Параболикой с небольшим уклоном вниз и влево
-            Corner(348.6, -33., -3.)     // Parabolica с уклоном вниз и влево (внутренний радиус)
+        {   //Suzuka GP Detailed
+            Corner( 750.0,     0.0,  0.0),   // Main straight
+            Corner( 100.0,    85.0,  0.0),   // T1 (R)
+            Corner(  82.0,    75.0,  0.0),   // T2 (R)
+            Corner(  45.0,   55.0,  0.0),   // S1 (L)
+            Corner(  48.0,    48.0,  0.0),   // S2 (R)
+            Corner(  46.0,   45.0,  0.0),   // S3 (L)
+            Corner(  52.0,    42.0,  0.0),   // S4 (R)
+            Corner(  95.0,   55.0,  0.0),   // Dunlop (L)
+            Corner( 165.0,   65.0,  0.0),   // Reverse Bank (L)
+            Corner(  65.0,    25.0,  0.0),   // NIPPO (R)
+            Corner(  80.0,     0.0,  0.0),   // to Degner
+            Corner(  65.0,   55.0,  0.0),   // Degner 1 (L)
+            Corner(  55.0,   70.0,  0.0),   // Degner 2 (L)
+            Corner(  90.0,     0.0,  0.0),   // to Hairpin
+            Corner(  62.0,   70.0,  0.0),   // Hairpin entry (L)
+            Corner(  78.0,   80.0,  0.0),   // Hairpin apex (L)
+            Corner(  50.0,   35.0,  0.0),   // Hairpin exit (L)
+            Corner( 250.0,     0.0,  0.0),   // Hairpin to 200R
+            Corner( 105.0,   35.0,  0.0),   // 200R (L)
+            Corner(  85.0,   30.0,  0.0),   // 200R exit (L)
+            Corner( 180.0,     0.0,  0.0),   // to Spoon
+            Corner( 105.0,   45.0,  0.0),   // Spoon entry (L)
+            Corner( 125.0,   50.0,  0.0),   // Spoon middle (L)
+            Corner( 110.0,   35.0,  0.0),   // Spoon exit (L)
+            Corner( 820.0,     0.0,  0.0),   // West straight
+            Corner( 120.0,     0.0,  0.0),   // 130R approach
+            Corner( 280.0,   65.0,  0.0),   // 130R (L)
+            Corner(  80.0,   20.0,  0.0),   // 130R exit (L)
+            Corner( 520.0,     0.0,  0.0),   // to chicane
+            Corner(  45.0,    80.0,  0.0),   // Casio right (R)
+            Corner(  45.0,  105.0,  0.0),   // Casio left (L)
+            Corner(  65.0,     0.0,  0.0),   // Casio exit
+            Corner( 124.0,     0.0,  0.0),   // Final approach
+            Corner(  95.0,    45.0,  0.0),   // Final corner entry (R)
+            Corner(  75.0,    40.0,  0.0),   // Final corner exit (R)
+            Corner( 650.0,     0.0,  0.0),   // Main straight approach
         },
-        {   //Spa GP
-            Corner(850.0, 0.0, -10.0),   // Главная прямая (спуск к La Source)
-            Corner(30.0, 120.0, -1.0),   // La Source (T1)
-            Corner(450.0, 0.0, -15.0),   // Спуск к Eau Rouge
-            Corner(60.0, 35.0, 5.0),     // Eau Rouge (T2)
-            Corner(80.0, 45.0, 18.0),    // Raidillon (T3-T4) — крутой подъём
-            Corner(780.0, 0.0, 8.0),     // Прямая Kemmel Straight
-            Corner(45.0, 85.0, 0.0),     // Les Combes T5
-            Corner(40.0, 80.0, 0.0),     // Les Combes T6
-            Corner(150.0, 0.0, -4.0),    // Прямая к Malmedy
-            Corner(50.0, 65.0, -3.0),    // Malmedy (T7)
-            Corner(320.0, 0.0, -12.0),   // Спуск к Rivage
-            Corner(70.0, 95.0, -6.0),    // Bruxelles / Rivage (T8)
-            Corner(110.0, 50.0, -4.0),   // T9
-            Corner(300.0, 0.0, -8.0),    // Спуск к Pouhon
-            Corner(220.0, 85.0, -2.0),   // Pouhon (T10-T11) — скоростная дуга
-            Corner(250.0, 0.0, 3.0),     // Прямая к Fagnes
-            Corner(55.0, 75.0, 1.0),     // Fagnes T12
-            Corner(50.0, 70.0, 0.0),     // Fagnes T13
-            Corner(180.0, 0.0, 2.0),     // Прямая к Stavelot
-            Corner(90.0, 60.0, 1.0),     // Stavelot (T14-T15)
-            Corner(950.0, 0.0, 5.0),     // Прямая Blanchimont
-            Corner(260.0, 30.0, 1.0),    // Blanchimont (T16) — плоский скоростной поворот
-            Corner(500.0, 0.0, 0.0),     // Подход к Bus Stop
-            Corner(35.0, 110.0, 0.0),    // Bus Stop Chicane T17
-            Corner(35.0, 105.0, 0.0)     // Bus Stop Chicane T18
-        },
-        {   //Nürburgring GP
-            Corner(700.0, 0.0, -5.0),    // Старт/Финиш
-            Corner(45.0, 115.0, -2.0),   // Yokohama T1
-            Corner(120.0, 60.0, 1.0),    // Mercedes Arena (T2)
-            Corner(140.0, 130.0, 3.0),   // Mercedes Arena (T3)
-            Corner(150.0, 75.0, 0.0),    // Выход из Arena (T4)
-            Corner(380.0, 0.0, -8.0),    // Спуск к Kurve 5
-            Corner(110.0, 70.0, -4.0),   // T5
-            Corner(220.0, 0.0, -5.0),    // Прямая к Ford Kurve
-            Corner(130.0, 80.0, -3.0),   // Ford Kurve (T6)
-            Corner(310.0, 0.0, 6.0),     // Подъём к Dunlop
-            Corner(150.0, 105.0, 4.0),   // Dunlop Hairpin (T7)
-            Corner(460.0, 0.0, 0.0),     // Прямая к Schumacher S
-            Corner(140.0, 45.0, -2.0),   // Schumacher S (T8)
-            Corner(130.0, 50.0, 0.0),    // Schumacher S (T9)
-            Corner(280.0, 0.0, 2.0),     // Прямая к Kumho
-            Corner(110.0, 75.0, 1.0),    // Kumho Kurve (T10)
-            Corner(620.0, 0.0, 5.0),     // Прямая Backstraight
-            Corner(40.0, 90.0, 0.0),     // NGK Chicane (T11)
-            Corner(40.0, 85.0, 0.0),     // NGK Chicane (T12)
-            Corner(180.0, 0.0, -1.0),    // Прямая к Coca-Cola Kurve
-            Corner(115.0, 75.0, 0.0)     // Coca-Cola Kurve (T13)
-        },
-        {   //Red Bull Ring GP
-            Corner(800.0, 0.0, 12.0),    // Старт/Финиш (крутой подъём)
-            Corner(50.0, 95.0, 2.0),     // Niki Lauda Corner (T1)
-            Corner(880.0, 0.0, 25.0),    // Прямая вверх по холму
-            Corner(35.0, 125.0, 2.0),    // Remus Hairpin (T3) — главное место для обгонов
-            Corner(820.0, 0.0, -20.0),   // Крутой спуск к Schlossgold
-            Corner(55.0, 90.0, -5.0),    // Schlossgold (T4)
-            Corner(160.0, 0.0, -3.0),    // Прямая
-            Corner(110.0, 55.0, -2.0),   // Rauch (T5)
-            Corner(140.0, 60.0, 0.0),    // T6
-            Corner(210.0, 0.0, 1.0),     // Прямая
-            Corner(120.0, 65.0, 0.0),    // Wurth (T7)
-            Corner(150.0, 0.0, 0.0),     // Прямая к финальным поворотам
-            Corner(100.0, 70.0, -2.0),   // Rindt (T9)
-            Corner(110.0, 75.0, -1.0)    // Red Bull Mobile (T10)
+        {   //Suzuka GP
+            {800.0, 0.0},     // Главная прямая
+            {50.0, 70.0},     // First Corner (T1)
+            {45.0, 85.0},     // S Curves (T2-T3)
+            {40.0, 75.0},     // S Curves (T4-T5)
+            {45.0, 80.0},     // Dunlop Curve (T6)
+            {350.0, 0.0},     // Прямая
+            {35.0, 105.0},    // Degner 1 & 2 (T8-T9)
+            {400.0, 0.0},     // Под мост
+            {30.0, 120.0},    // Hairpin (T11) — шпилька
+            {600.0, 0.0},     // Разгон
+            {65.0, 55.0},     // Spoon Curve (T13-T14)
+            {1200.0, 0.0},    // Длинный разгон к 130R
+            {60.0, 45.0},     // 130R (T15) — газ в пол
+            {30.0, 115.0},    // Casio Triangle Chicane (T16-T17)
+            {400.0, 0.0}      // Выход на старт
         }
     };
 
-    std::vector<std::string> track_names = {"Monza GP", "Spa GP", "Nurburgring GP", "Red Bull Ring GP"};
+    std::vector<std::string> track_names = {"Suzuka GP", "Suzuka GP (Detailed)"};
 
     for (size_t t = 0; t < tracks.size(); ++t) {
         std::cout << "=== " << track_names[t] << " ===\n";

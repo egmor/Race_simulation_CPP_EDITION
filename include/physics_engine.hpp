@@ -1,33 +1,52 @@
 #ifndef PHYSICS_ENGINE_HPP
 #define PHYSICS_ENGINE_HPP
 
+#pragma once
+
 #include <vector>
 #include <string>
 #include <cmath>
 #include <algorithm>
 
-namespace global_constants {
-    inline constexpr double g{9.81}; 
-    inline constexpr double pi{3.141592653589793};
-    inline constexpr double air_density{1.225}; 
-    
-    inline constexpr double downforce_coefficient{1.85}; 
-    inline constexpr double drag_coefficient{0.95};
-    
-    inline constexpr double horsepower{530.0 * 745.7}; 
-    inline constexpr double weight{1320.0};
 
-    inline constexpr double tyre_grip{1.28}; 
-    inline constexpr double effective_hp{ horsepower * 0.88 * 0.91 }; 
+namespace global_constants {
+    constexpr double g{9.81}; 
+    constexpr double pi{3.141592653589793};
+    constexpr double air_density{1.225}; 
+    
+    constexpr double downforce_coefficient{1.85}; 
+    constexpr double drag_coefficient{0.95};
+    
+    constexpr double horsepower{530.0 * 745.7}; 
+    constexpr double weight{1320.0};
+
+    constexpr double tyre_grip{1.28}; 
+    constexpr double effective_hp{ horsepower * 0.88 * 0.91 }; 
+
+    constexpr double apex{0.5};
+    constexpr double late_apex{0.675};
+    constexpr double early_apex{0.325};
 }
 
 struct Corner {
-    double distance{0.0};         
-    double degree{0.0};           
-    double height_difference{0.0}; 
+    double degree{0.0};   // Угол поворота в градусах 
+    double distance{0.0}; // Длина участка в метрах
+    double width{0.0};    // Ширина трассы в метрах
+    double height_difference{0.0};  // Уклон трассы в метрах
 
-    Corner(double l, double a = 0.0, double h = 0.0) 
-        : distance(l), degree(a), height_difference(h) {}
+    double get_central_radius() const {
+        if (std::abs(degree) < 1e-6) {
+            return std::numeric_limits<double>::infinity(); // Прямая линия
+        }
+        return (180.0 * distance) / (global_constants::pi * degree);
+    }
+
+    double get_degree_radians() const {
+        return degree * (global_constants::pi / 180.0);
+    }
+
+    Corner(double deg, double dist, double wid, double h_diff = 0.0)
+        : degree(deg), distance(dist), width(wid), height_difference(h_diff) {}
 };
 
 double calculating_radius(const Corner& seg);
