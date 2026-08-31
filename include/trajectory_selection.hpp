@@ -9,15 +9,14 @@
 #include <algorithm>
 #include "physics_engine.hpp"
 
+
 struct ApexResult {
-    double entry_radius{0.0};
-    double exit_radius{0.0};
-    double speed_apex{0.0};
-    double l_entry{0.0};
-    double l_exit{0.0};
+    double radius;       // Радиус получившейся траектории
+    double speed_apex;   // Корректная максимальная скорость в апексе (м/с)
+    double apex_angle;   // Фактический угол точки апекса в радианах
 };
 
-double get_effective_radius(const Corner& seg);
+double get_geometric_apex_radius(const Corner& seg);
 double throughput_speed_limit(const Corner& seg);
 ApexResult late_apex(const Corner& seg);
 ApexResult early_apex(const Corner& seg);
