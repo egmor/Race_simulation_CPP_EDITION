@@ -84,7 +84,7 @@ int main() {
         }
     };
 
-    std::vector<std::string> track_names = {"Suzuka GP", "Suzuka GP (Detailed)"};
+    std::vector<std::string> track_names = {"Suzuka GP  (Detailed)", "Suzuka GP"};
 
     for (size_t t = 0; t < tracks.size(); ++t) {
         std::cout << "=== " << track_names[t] << " ===\n";
@@ -93,18 +93,14 @@ int main() {
         double total_time{0.0};
 
         for (size_t lap = 0; lap < 50; ++lap) {
-            double lap_time {0.0};
-            for (size_t i = 0; i < tracks[t].size(); ++i) {
-                lap_time += laptime(tracks[i]);
-            }
-            print_laptime(lap_time,"Lap " + std::to_string(lap + 1) + (lap + 1 < 10 ? " " : "") ); // Вывод времени круга с выравниванием для однозначных чисел
+            double lap_time = laptime(tracks[t]);  // Исправлено!
+            print_laptime(lap_time, "Lap " + std::to_string(lap + 1) + (lap + 1 < 10 ? " " : ""));
             total_time += lap_time;
         }
 
         std::cout << "\n";
-        print_laptime(total_time, "Total"); // "Total" indicates total time
+        print_laptime(total_time, "Total");
         std::cout << "\n";
     }
-
     return 0;
 }

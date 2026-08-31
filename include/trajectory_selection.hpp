@@ -7,6 +7,7 @@
 #include <cmath>
 #include <limits>
 #include <algorithm>
+#include "physics_engine.hpp"
 
 struct ApexResult {
     double entry_radius{0.0};
