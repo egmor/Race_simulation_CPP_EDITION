@@ -26,6 +26,9 @@ namespace global_constants {
     constexpr double apex{0.5};
     constexpr double late_apex{0.675};
     constexpr double early_apex{0.325};
+
+    constexpr double max_accel{12.0};
+    constexpr double max_speed{297.5};
 }
 
 struct Corner {
@@ -33,6 +36,7 @@ struct Corner {
     double distance{0.0}; // Длина участка в метрах
     double width{0.0};    // Ширина трассы в метрах
     double height_difference{0.0};  // Уклон трассы в метрах
+    bool is_straight{false};
 
     double get_central_radius() const {
         if (std::abs(degree) < 1e-6) {
@@ -45,16 +49,14 @@ struct Corner {
         return degree * (global_constants::pi / 180.0);
     }
 
-    Corner(double deg, double dist, double wid, double h_diff = 0.0)
-        : degree(deg), distance(dist), width(wid), height_difference(h_diff) {}
+    Corner(double deg, double dist, double wid, double h_diff, bool is_str)
+        : degree(deg), distance(dist), width(wid), height_difference(h_diff), is_straight(is_str) {}
 };
 
-double calculating_radius(const Corner& seg);
 double dinamic_grip_max(double speed);
 double max_speed_apex(double radius);
 double get_current_accelerate(double speed);
 double get_safe_decel_forces();
 double get_decel_forces(double speed);
-double get_target_speed_ahead(const std::vector<Corner>& track, size_t current_idx, double speed_enter);
 
 #endif // PHYSICS_ENGINE_HPP

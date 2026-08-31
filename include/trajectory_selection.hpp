@@ -16,11 +16,9 @@ struct ApexResult {
     double l_exit{0.0};
 };
 
-
-
 double get_effective_radius(const Corner& seg);
 double throughput_speed_limit(const Corner& seg);
 ApexResult late_apex(const Corner& seg);
 ApexResult early_apex(const Corner& seg);
 
-#endif TRAJECTORY_SELECTION_HPP
+#endif // TRAJECTORY_SELECTION_HPP
